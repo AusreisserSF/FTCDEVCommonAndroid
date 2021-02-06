@@ -1,0 +1,3 @@
+include ':ftcdevcommon'
+include ':app'
+rootProject.name = "FTCDEVCommonAndroid"
