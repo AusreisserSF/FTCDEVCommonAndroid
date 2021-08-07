@@ -1,11 +1,5 @@
 package org.firstinspires.ftc.ftcdevcommon;
 
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.Callable;
@@ -15,10 +9,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-// Why is support for logging in this package? Because the UVC
-// camera code needs to run as a stand-alone app as well as in the FTC robotics
-// environment.
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 //https://www.logicbig.com/tutorials/core-java-tutorial/logging/customizing-default-format.html
 public class RobotLogCommon {
@@ -38,9 +33,10 @@ public class RobotLogCommon {
 
     // Wanted to use a MemoryHandler to log to a buffer but found out here --
     // https://chromium.googlesource.com/android_tools/+/refs/heads/master/sdk/sources/android-25/java/util/logging/MemoryHandler.java
-    // that push() is synchronous with the linked FileHandler. So we'll use a
-    // BlockingQueue instead.
-    public static void initialize(String pLogPath) {
+    // that push() is synchronous with the linked FileHandler. So we'll use a BlockingQueue instead.
+    //## There's nothing wrong with a static initializer block but having an initialize() method
+    // gives the caller more flexibility in building up the working directory string.
+    public static synchronized void initialize(String pLogPath) {
         if (loggerInitialized)
             return;
 
@@ -87,7 +83,7 @@ public class RobotLogCommon {
             loggerInitialized = true;
 
         } catch (Exception exception) {
-            throw new AutonomousRobotException(TAG, "Error in initialization of logging: " + exception.getMessage());
+            throw new AutonomousLoggingException(TAG, "Error in initialization of logging: " + exception.getMessage());
         }
     }
 
@@ -97,38 +93,6 @@ public class RobotLogCommon {
 
     public static Level getMinimumLoggingLevel() {
         return logger.getLevel();
-    }
-
-    // Test that the string parameter corresponds to a logging
-    // Level that is >= the current minimum.
-    public static boolean logThisLevel(final String pLevel) {
-        Level levelToCheck;
-        switch (pLevel) {
-            case "d": {
-                levelToCheck = Level.FINE;
-                break;
-            }
-            case "v": {
-                levelToCheck = Level.FINER;
-                break;
-            }
-            case "vv": {
-                levelToCheck = Level.FINEST;
-                break;
-            }
-            default: {
-                throw new AutonomousRobotException(TAG, "Invalid debug log option");
-            }
-            /*
-            // IntelliJ Java 14 only
-            case "d" -> levelToCheck = Level.FINE;
-            case "v" -> levelToCheck = Level.FINER;
-            case "vv" -> levelToCheck = Level.FINEST;
-            default -> throw new AutonomousRobotException(TAG, "Invalid debug log option");
-            */
-        }
-
-        return logger.isLoggable(levelToCheck);
     }
 
     public static void e(String pTAG, String pLogMessage) {
@@ -157,15 +121,16 @@ public class RobotLogCommon {
 
     // Even though the BlockingQueue is thread-safe there's a warning about drainTo:
     // "A failure encountered while attempting to add elements to collection c
-    // [during
-    // the drainTo] may result in elements being in neither, either or both
-    // collections
-    // when the associated exception is thrown."
-    private static void enqueueLogEntry(Level pLevel, String pLogString) {
-        if (!loggerInitialized) {
-           System.out.println(pLogString); // desperation time
-           return;
-        }
+    // [during the drainTo] may result in elements being in neither, either or both
+    // collections when the associated exception is thrown."
+    private static synchronized void enqueueLogEntry(Level pLevel, String pLogString) {
+        if (!loggerInitialized)
+            throw new AutonomousLoggingException(TAG, "Logging subsystem is not initiaalized"); // desperation time
+
+        // Don't enqueue if the log entry is below the current minimum logging
+        // level.
+        if (!logger.isLoggable(pLevel))
+            return;
 
         logQueueLock.lock();
         try {
@@ -175,11 +140,9 @@ public class RobotLogCommon {
         }
     }
 
-    public static void closeLog() {
-        if (!loggerInitialized) {
-            System.out.println("can't close a log that's not open"); // desperation time
-            return;
-        }
+    public static synchronized void closeLog() {
+        if (!loggerInitialized)
+            throw new AutonomousLoggingException(TAG, "Can't close a log that's not open"); // desperation time
 
         // See comments above at enqueueLogEntry.
         logQueueLock.lock();
@@ -187,7 +150,7 @@ public class RobotLogCommon {
             if (closeLogWriter)
                 return; // only close once
             closeLogWriter = true;
-            logEntryQueue.add(Pair.create(Level.INFO, "Shutting down log"));
+            logEntryQueue.add(Pair.create(Level.INFO, TAG + " Shutting down log"));
         } finally {
             logQueueLock.unlock();
         }
@@ -198,16 +161,15 @@ public class RobotLogCommon {
             logWriterFuture.get(250, TimeUnit.MILLISECONDS);
         } catch (Throwable t) {
             if (t instanceof TimeoutException) {
-                logger.info("Timed out waiting for the final log entries to be written out");
+                logger.info(TAG + " Timed out waiting for the final log entries to be written out");
             }
             // Swallow all other exceptions - don't take down the application because of a logging problem.
-       } finally {
+        } finally {
             fileHandler.close();
         }
     }
 
     private static class LogWriter implements Callable<Void> {
-
         public Void call() {
             ArrayList<Pair<Level, String>> drain = new ArrayList<>();
             boolean closeNow = false;
@@ -221,17 +183,16 @@ public class RobotLogCommon {
 
                     if (closeLogWriter) {
                         closeNow = true;
-                        logger.info("Closing log and writing out the last " + drain.size() + " entries on the queue");
+                        logger.info(TAG + " Closing log and writing out the last " + drain.size() + " entries on the queue");
                     }
 
                 } catch (InterruptedException iex) {
                     // Swallow exception - we don't want to take down the application because of a
-                    // logging problem
+                    // logging problem.
                 } finally {
                     logQueueLock.unlock();
                 }
 
-                //logger.info("Logging " + drain.size() + " drained queue entries");
                 drain.forEach(e -> logger.log(e.first, e.second));
                 if (closeNow)
                     return null; // stop now

@@ -1,26 +1,13 @@
 package org.firstinspires.ftc.ftcdevcommon;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
-public class CommonUtils {
-
-    // Requires Android minSdkVersion 26
-    // public static String getLocalDateTimeStamp(LocalDateTime pLocalDateTime) {
-    //    return pLocalDateTime.format(DateTimeFormatter.ofPattern("MMddHHmm'_'ssSSS"));
-    // }
-
-    public static final SimpleDateFormat dateFormat = new SimpleDateFormat("MMddHHmm'_'ssSSS", Locale.US);
-    public static String getDateTimeStamp(Date pDate) {
-        return dateFormat.format(pDate);
-    }
+public class Threading {
 
     // See https://stackoverflow.com/questions/43764036/how-to-convert-the-code-to-use-completablefuture
     // Answer #6 from Holger
@@ -32,6 +19,8 @@ public class CommonUtils {
             } catch (Throwable ex) {
                 cf.completeExceptionally(ex);
             }
+        }).exceptionally(ex -> {
+            throw new AutonomousRobotException(Threading.class.getSimpleName(), ex.getMessage());
         });
         return cf;
     }

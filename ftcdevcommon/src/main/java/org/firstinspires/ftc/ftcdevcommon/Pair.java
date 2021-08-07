@@ -61,7 +61,7 @@ public class Pair<F, S> {
     }
     @Override
     public String toString() {
-        return "Pair{" + String.valueOf(first) + " " + String.valueOf(second) + "}";
+        return "Pair{" + first + " " + second + "}";
     }
     /**
      * Convenience method for creating an appropriately typed pair.
@@ -70,6 +70,6 @@ public class Pair<F, S> {
      * @return a Pair that is templatized with the types of a and b
      */
     public static <A, B> Pair <A, B> create(A a, B b) {
-        return new Pair<A, B>(a, b);
+        return new Pair<>(a, b);
     }
 }
