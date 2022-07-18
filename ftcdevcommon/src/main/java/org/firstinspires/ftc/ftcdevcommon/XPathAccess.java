@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.ftcdevcommon;
 
 import javax.xml.xpath.*;
+
 import org.w3c.dom.Element;
 
 import java.util.ArrayList;
@@ -10,211 +11,191 @@ import java.util.List;
 // Generic access to XML elements via XPath.
 public class XPathAccess {
 
-	// --------- CLASS VARIABLES ----------
-	private static final String TAG = "XPathAccess";
+    // --------- CLASS VARIABLES ----------
+    private static final String TAG = "XPathAccess";
 
-	private final XPath xpath;
-	private final Element xmlElement;
+    private final XPath xpath;
+    private final Element xmlElement;
 
-	// --------- CONSTRUCTORS ----------
-	//## Compromise: pass an XML element in to the constructor.
-	// It would be possible to pass the element in to every method
-	// but the syntax is simpler this way.
-	public XPathAccess(RobotXMLElement pRobotXMLElement) {
-		XPathFactory xpathFactory = XPathFactory.newInstance();
-		xpath = xpathFactory.newXPath();
-		xmlElement = pRobotXMLElement.getRobotXMLElement();
-	}
+    // --------- CONSTRUCTORS ----------
+    //## Compromise: pass an XML element in to the constructor.
+    // It would be possible to pass the element in to every method
+    // but the syntax is simpler this way.
+    public XPathAccess(RobotXMLElement pRobotXMLElement) {
+        XPathFactory xpathFactory = XPathFactory.newInstance();
+        xpath = xpathFactory.newXPath();
+        xmlElement = pRobotXMLElement.getRobotXMLElement();
+    }
 
-	// --------- FUNCTIONS ----------
+    // --------- FUNCTIONS ----------
 
- 	// Gets a text string from an element or attribute and checks it against a list
-	// of valid values. Always returns lower case.
-	public String getStringInRange(String pPath, List<String>pRangeList) throws XPathExpressionException {
-		String text = getString(pPath);
-		if (!pRangeList.contains(text))
-			throw new AutonomousRobotException(TAG, "Text value " + text + " is not in a valid value");
+    // Works for both elements and attributes. The element or attribute
+    // must be present and its associated text must not be empty.
+    public String getRequiredString(String pPath) throws XPathExpressionException {
+        // Crude but effective in our environment: if the path includes a '@'
+        // consider it to be an XML attribute.
+        String text;
+        if (pPath.contains("@"))
+            text = getAttributeValue(pPath);
+        else
+            text = getElementText(pPath);
 
-		return text;
-	}
+        if (text.isEmpty())
+            throw new AutonomousRobotException(TAG, "Requested item " + pPath + " does not exist in " + xmlElement.getTagName());
 
-	// Works for both elements and attributes.
-	// Enforces lower case throughout.
-	public String getString(String pPath) throws XPathExpressionException {
-	    return getString(pPath, false);
-	}
+        return text;
+    }
 
-	public String getString(String pPath, boolean pIgnoreCase) throws XPathExpressionException {
-		// Crude but effective in our environment: if the path includes a '@'
-		// consider it to be an XML attribute.
-		String text;
-		if (pPath.contains("@"))
-			text = getAttributeText(pPath);
-		else
-			text = getElementText(pPath);
+    // If the requested text is not present, this method returns the default value.
+    // Otherwise it returns the text of the element or attribute.
+    public String getString(String pPath, String pDefaultIfMissing) throws XPathExpressionException {
+        // Crude but effective in our environment: if the path includes a '@'
+        // consider it to be an XML attribute.
+        String text;
+        if (pPath.contains("@"))
+            text = getAttributeValue(pPath);
+        else
+            text = getElementText(pPath);
 
-		if (text.isEmpty())
-			throw new AutonomousRobotException(TAG, "Requested item " + pPath + " does not exist in " + xmlElement.getTagName());
+        if (text.isEmpty())
+            return pDefaultIfMissing;
 
-		// Make sure that the text is lower case if case is significant.
-		if (!pIgnoreCase && !text.equals(text.toLowerCase()))
-			throw new AutonomousRobotException(TAG, "Expected lower case in text " + text);
+        return text;
+    }
 
-		return text;
-	}
+    // Gets a text string from an element or attribute and checks it against a list
+    // of valid values.
+    public String getRequiredStringInRange(String pPath, List<String> pRangeList) throws XPathExpressionException {
+        String text = getRequiredString(pPath);
+        if (!pRangeList.contains(text))
+            throw new AutonomousRobotException(TAG, "Text value " + text + " is not a valid value");
 
-	// Gets a text string from an element or attribute and checks it against a list
-	// of valid values.
-	public String getStringInRange(String pPath, String pDefaultIfMissing, List<String>pRangeList) throws XPathExpressionException {
+        return text;
+    }
 
-		String text = getString(pPath, pDefaultIfMissing);
-		if (text.equals(pDefaultIfMissing))
-			return text;
+    // Gets a text string from an element or attribute and checks it against a list
+    // of valid values.
+    public String getStringInRange(String pPath, String pDefaultIfMissing, List<String> pRangeList) throws XPathExpressionException {
+        String text = getString(pPath, pDefaultIfMissing);
+        if (text.equals(pDefaultIfMissing))
+            return text;
 
-		if (!pRangeList.contains(text))
-			throw new AutonomousRobotException(TAG, "Text value " + text + " is not in a valid value");
+        if (!pRangeList.contains(text))
+            throw new AutonomousRobotException(TAG, "Text value " + text + " is not valid");
 
-		return text;
-	}
+        return text;
+    }
 
-	// If the requested text is not present, this method returns the default value.
-	// Otherwise it returns the text of the element or attribute. Enforces lower
-	// case throughout.
-	public String getString(String pPath, String pDefaultIfMissing) throws XPathExpressionException {
+    public List<String> validRange(String... pRangeValues) {
+        List<String> finalRangeList = new ArrayList<>();
 
-		// Make sure that the default value is lower case.
-		if (!pDefaultIfMissing.equals(pDefaultIfMissing.toLowerCase()))
-			throw new AutonomousRobotException(TAG, "Expected lower case in default " + pDefaultIfMissing);
+        if (pRangeValues == null)
+            return finalRangeList;
 
-		// Crude but effective in our environment: if the path includes a '@'
-		// consider it to be an XML attribute.
-		String text;
-		if (pPath.contains("@"))
-			text = getAttributeText(pPath);
-		else
-			text = getElementText(pPath);
+        finalRangeList.addAll(Arrays.asList(pRangeValues));
+        return finalRangeList;
+    }
 
-		if (text.isEmpty())
-			return pDefaultIfMissing;
+    // Works with both attributes and elements.
+    public double getRequiredDouble(String pPath) throws XPathExpressionException {
+        String text = getRequiredString(pPath);
+        return getDoubleFromText(text, pPath);
+    }
 
-		// Make sure that the text is lower case.
-		if (!text.equals(text.toLowerCase()))
-			throw new AutonomousRobotException(TAG, "Expected lower case in text " + text);
+    // Works with both attributes and elements.
+    public double getDouble(String pPath, double pDefaultValue) throws XPathExpressionException {
+        String defaultString = Double.toString(pDefaultValue);
+        String text = getString(pPath, defaultString);
+        if (text.equals(defaultString))
+            return pDefaultValue;
 
-		return text;
-	}
+        return getDoubleFromText(text, pPath);
+    }
 
-	public List<String> validRange(String... pRangeValues) {
+    // Works with both attributes and elements.
+    public int getRequiredInt(String pPath) throws XPathExpressionException {
+        String text = getRequiredString(pPath);
+        return getIntFromText(text, pPath);
+    }
 
-		List<String> finalRangeList = new ArrayList<>();
+    // Works with both attributes and elements.
+    public int getInt(String pPath, int pDefaultValue) throws XPathExpressionException {
+        String defaultString = Integer.toString(pDefaultValue);
+        String text = getString(pPath, defaultString);
+        if (text.equals(defaultString))
+            return pDefaultValue;
 
-		if (pRangeValues == null)
-			return finalRangeList;
+        return getIntFromText(text, pPath);
+    }
 
-		// We're not checking the values in the range list for lower case
-		// because lower case is enforced everywhere else. So the range
-		// check will automatically fail on upper or mixed case strings.
-		finalRangeList.addAll(Arrays.asList(pRangeValues));
-		return finalRangeList;
-	}
+    // Works with both attributes and elements.
+    public boolean getRequiredBoolean(String pPath) throws XPathExpressionException {
+        String text = getRequiredString(pPath);
+       return getBooleanFromText(text, pPath);
+    }
 
-	public int getInt(String pPath) throws XPathExpressionException {
-		String text = getElementText(pPath);
-		if (text.isEmpty())
-			throw new AutonomousRobotException(TAG, "Requested item " + pPath + " does not exist in " + xmlElement.getTagName());
+    // Works with both attributes and elements.
+    public boolean getBoolean(String pPath, boolean pDefaultValue) throws XPathExpressionException {
+        String defaultString = Boolean.toString(pDefaultValue);
+        String text = getString(pPath, defaultString);
+        if (text.equals(defaultString))
+            return pDefaultValue;
 
-		return getIntFromText(text, pPath);
-	}
+        return getBooleanFromText(text, pPath);
+    }
 
-	public int getInt(String pPath, int defaultValue) throws XPathExpressionException {
-		String text = getElementText(pPath);
-		if (text.isEmpty())
-			return defaultValue;
+    // Returns an empty string if the attribute does not exist or
+    // the attribute value is an empty string.
+    private String getAttributeValue(String pPath) throws XPathExpressionException {
+        XPathExpression expr = xpath.compile(pPath);
+        // Trim needed because only validating parsers will strip white space.
+        return ((String) expr.evaluate(xmlElement, XPathConstants.STRING)).trim();
+    }
 
-		return getIntFromText(text, pPath);
-	}
-
-	public double getDouble(String pPath) throws XPathExpressionException {
-		String text = getElementText(pPath);
-		if (text.isEmpty())
-			throw new AutonomousRobotException(TAG, "Requested item " + pPath + " does not exist in " + xmlElement.getTagName());
-
-		return getDoubleFromText(text, pPath);
-	}
-
-	public double getDouble(String pPath, double defaultValue) throws XPathExpressionException {
-		String text = getElementText(pPath);
-		if (text.isEmpty())
-			return defaultValue;
-
-		return getDoubleFromText(text, pPath);
-	}
-	
-	public boolean getBoolean(String pPath) throws XPathExpressionException {
-		String text = getElementText(pPath);
-		if (text.isEmpty())
-			throw new AutonomousRobotException(TAG, "Requested item " + pPath + " does not exist in " + xmlElement.getTagName());
-
-		return getBooleanFromText(text, pPath);
-	}
-
-	public boolean getBoolean(String pPath, boolean defaultValue) throws XPathExpressionException {
-		String text = getElementText(pPath);
-		if (text.isEmpty())
-			return defaultValue;
-
-		return getBooleanFromText(text, pPath);
-	}
-
-	// Assumes that the path contains a valid XPath attribute expression.
-	private String getAttributeText(String pPath) throws XPathExpressionException {
-		XPathExpression expr = xpath.compile(pPath);
-		// Trim needed because only validating parsers will strip white space.
-		return ((String) expr.evaluate(xmlElement, XPathConstants.STRING)).trim();
-	}
-
-	public String getElementText(String pPath) throws XPathExpressionException {
+    // Returns an empty string if the element does not exist or
+    // the element's text value is an empty string.
+    private String getElementText(String pPath) throws XPathExpressionException {
         XPathExpression expr = xpath.compile(pPath + "/text()");
         // Trim needed because only validating parsers will strip white space.
-		return ((String) expr.evaluate(xmlElement, XPathConstants.STRING)).trim();
-	}
-	
-	public int getIntFromText(String pIntText, String pNodeName) {
-		if (pIntText.isEmpty())
-			throw new AutonomousRobotException(TAG, "Requested item " + pIntText + " does not exist in " + xmlElement.getTagName());
+        return ((String) expr.evaluate(xmlElement, XPathConstants.STRING)).trim();
+    }
 
-		int itemInt;
-		try {
-			itemInt = Integer.parseInt(pIntText);
-		} catch (NumberFormatException ex) {
-			throw new AutonomousRobotException(TAG, "Value in " + pNodeName + ": " + pIntText + " is not an int");
-		}
+    private double getDoubleFromText(String pDoubleText, String pNodeName) {
+        if (pDoubleText.isEmpty())
+            throw new AutonomousRobotException(TAG, "Requested item " + pNodeName + " does not exist in " + xmlElement.getTagName());
 
-		return itemInt;
-	}
+        double itemDouble;
+        try {
+            itemDouble = Double.parseDouble(pDoubleText);
+        } catch (NumberFormatException ex) {
+            throw new AutonomousRobotException(TAG, "Value in " + pNodeName + ": " + pDoubleText + " is not a double");
+        }
 
-	public double getDoubleFromText(String pDoubleText, String pNodeName) {
-		if (pDoubleText.isEmpty())
-			throw new AutonomousRobotException(TAG, "Requested item " + pNodeName + " does not exist in " + xmlElement.getTagName());
+        return itemDouble;
+    }
 
-		double itemDouble;
-		try {
-			itemDouble = Double.parseDouble(pDoubleText);
-		} catch (NumberFormatException ex) {
-			throw new AutonomousRobotException(TAG, "Value in " + pNodeName + ": " + pDoubleText + " is not a double");
-		}
+    private int getIntFromText(String pIntText, String pNodeName) {
+        if (pIntText.isEmpty())
+            throw new AutonomousRobotException(TAG, "Requested item " + pIntText + " does not exist in " + xmlElement.getTagName());
 
-		return itemDouble;
-	}
-	
-	public boolean getBooleanFromText(String pBoolText, String pNodeName) {
-		if (pBoolText.isEmpty())
-			throw new AutonomousRobotException(TAG, "Requested item " + pNodeName + " does not exist in " + xmlElement.getTagName());
+        int itemInt;
+        try {
+            itemInt = Integer.parseInt(pIntText);
+        } catch (NumberFormatException ex) {
+            throw new AutonomousRobotException(TAG, "Value in " + pNodeName + ": " + pIntText + " is not an int");
+        }
 
-		if (pBoolText.equals("true"))
-			return true;
-		if (pBoolText.equals("false"))
-			return false;
-		throw new AutonomousRobotException(TAG, "Value in " + pNodeName + ": " + pBoolText + " is not a boolean");
-	}
+        return itemInt;
+    }
+
+    private boolean getBooleanFromText(String pBoolText, String pNodeName) {
+        if (pBoolText.isEmpty())
+            throw new AutonomousRobotException(TAG, "Requested item " + pNodeName + " does not exist in " + xmlElement.getTagName());
+
+        if (pBoolText.equals("true"))
+            return true;
+        if (pBoolText.equals("false"))
+            return false;
+        throw new AutonomousRobotException(TAG, "Value in " + pNodeName + ": " + pBoolText + " is not a boolean");
+    }
 }

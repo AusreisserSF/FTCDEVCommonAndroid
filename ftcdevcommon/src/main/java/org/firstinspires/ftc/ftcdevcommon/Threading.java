@@ -1,50 +1,66 @@
 package org.firstinspires.ftc.ftcdevcommon;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 
 public class Threading {
 
     // See https://stackoverflow.com/questions/43764036/how-to-convert-the-code-to-use-completablefuture
-    // Answer #6 from Holger
+    // Use answer with 6 upvotes from Holger.
+
+    //##!! 12/14/2021 Added the newSingleThreadExecutor below after getting
+    // inconsistent results when attempting to run the drive train and the
+    // Freight Frenzy elevator in separate threads in Autonomous. The typical
+    // pattern was that the first run after a cold start of the robot would
+    // complete the threads serially; subsequent runs without an intervening
+    // cold start would run the threads in parallel. The addition of the
+    // newSingleThreadExecutor resulted in parallel threads every time.
+    // For thread cancellation see --
+    // https://docs.oracle.com/javase/tutorial/essential/concurrency/interrupt.html
+    // and
+    // https://stackoverflow.com/questions/47597798/how-to-kill-completablefuture-related-threads
+    // and
+    // https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/ExecutorService.html#shutdownNow()
     public static <R> CompletableFuture<R> launchAsync(Callable<R> pCallable) {
+        ExecutorService singleExecutorService = Executors.newSingleThreadExecutor(); //##!! CRUCIAL
         CompletableFuture<R> cf = new CompletableFuture<>();
+        cf.whenComplete((x,y) -> singleExecutorService.shutdownNow());
         CompletableFuture.runAsync(() -> {
             try {
                 cf.complete(pCallable.call());
             } catch (Throwable ex) {
                 cf.completeExceptionally(ex);
             }
-        }).exceptionally(ex -> {
-            throw new AutonomousRobotException(Threading.class.getSimpleName(), ex.getMessage());
-        });
+        }, singleExecutorService); //##!! CRUCIAL
         return cf;
     }
 
-    // Tested in the eclipse Testbed 3/16/2020.
-    public static <R> R getFutureCompletion(CompletableFuture<R> pCompletable) throws InterruptedException, IOException {
+    // The description of the problem in
+    // https://stackoverflow.com/questions/10437890/what-is-the-best-way-to-handle-an-executionexception
+    // actually contains the best, if awkward, approach.
+    public static <R> R getFutureCompletion(CompletableFuture<R> pCompletable) throws InterruptedException, IOException, TimeoutException {
+        return getFutureCompletion(pCompletable, 0);
+    }
+
+    public static <R> R getFutureCompletion(CompletableFuture<R> pCompletable, int pTimeoutMs) throws InterruptedException, IOException, TimeoutException {
         R retVal = null;
         try {
-            retVal = pCompletable.get(); // allows catch clause for CompletionException below (no compiler error)
-        }
-
-        // Based on --
-        // https://stackoverflow.com/questions/10437890/what-is-the-best-way-to-handle-an-executionexception
-        // There are lots of answers but the first seems the most straightforward.
-        catch (Throwable t) {
+            if (pTimeoutMs != 0)
+                retVal = pCompletable.get(pTimeoutMs, TimeUnit.MILLISECONDS);
+            else
+                retVal = pCompletable.get(); // allows catch clause for CompletionException below (no compiler error)
+        } catch (Throwable t) {
             handleFutureException(t);
         }
-
         return retVal;
     }
 
-    // If you want to use get with a timeout you must catch the TimeoutException first,
-    // deal with it separately, then call here.
-    public static void handleFutureException(Throwable t) throws InterruptedException, IOException {
+    //  Exceptions caught during the execution of a CompletableFuture are wrapped
+    //  in an ExecutionException (if CompletableFuture.get() was called - our
+    //  standard usage) or a CompletionException (if CompletableFuture.join() was
+    //  called). In either case we must unwrap the exception and re-throw it as the
+    //  original type.
+    private static void handleFutureException(Throwable t) throws InterruptedException, IOException, TimeoutException {
 
         if ((t instanceof ExecutionException) || (t instanceof CompletionException)) {
             t = t.getCause(); // unwrap original exception
@@ -53,6 +69,10 @@ public class Threading {
         if (t instanceof CancellationException) {
             // Benign in our environment - part of a normal shutdown
             return;
+        }
+
+        if (t instanceof TimeoutException) {
+            throw (TimeoutException) t;
         }
 
         if (t instanceof InterruptedException) {
