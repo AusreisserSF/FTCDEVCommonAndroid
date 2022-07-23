@@ -11,15 +11,19 @@ except for the subdirectories intellij and android, each of which contains platf
 The FTCDEVCommonAndroid library may be incorporated into an FTC Android Studio project either as a source code module or as an aar.  
 
 1. As a source code module
-On Windows, for example, download and expand the zip file for this repository into a temporary directory, e.g. C:\TEMP\FTCDEVCommonAndroid.  
-Open your FTC Android Studio project and select File > New > Import Module
-Import the ftcappcommon module via from the temporary directory, e.g. C:\TEMP\FTCDEVCommonAndroid\ftcdevcommon
-Set Project settings the TeamCode module to depend on ftcappcommon
+On Windows, for example, download and expand the zip file for this repository into a temporary directory, e.g. C:\TEMP\FTCDEVCommonAndroid  
+Open your FTC Android Studio project and select File > New > Import Module  
+Select the source directory, e.g. C:\TEMP\FTCDEVCommonAndroid\ftcdevcommon and make sure the module name is :ftcdevcommon  
+Click Finish  
+In your Android Studio project, go to File > Project Structure and click on Dependencies, then TeamCode  
+Under the Declared Dependencies heading, click the + sign  
+Select 3 Module Depencency and click the checkbox for ftcdevcommon  
+Click OK  
 
-2. As an aar
-TBD
+2. As an aar  
+TBD  
 
-How to build the aar file:
+How to build the aar file:  
 Make the source code changes  
 
 In the build.gradle file change versionName 'n_v' to the correct version, e.g. 1_5 -> 2_0  
