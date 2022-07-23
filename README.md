@@ -17,13 +17,17 @@ Select the source directory, e.g. C:\TEMP\FTCDEVCommonAndroid\ftcdevcommon and m
 Click Finish  
 In your Android Studio project, go to File > Project Structure and click on Dependencies, then TeamCode  
 Under the Declared Dependencies heading, click the + sign  
-Select 3 Module Depencency and click the checkbox for ftcdevcommon  
+Select 3 Module Dependency and click the checkbox for ftcdevcommon  
 Click OK  
 
 2. As an aar  
-TBD  
+On Windows, for example, download and expand the zip file for this repository into a temporary directory, e.g. C:\TEMP\FTCDEVCommonAndroid   
+In your Android Studio project, go to File > Project Structure and click on Dependencies, then TeamCode  
+Under the Declared Dependencies heading, click the + sign  
+Select 2 JAR/AAR Dependency and navigate to the aar file, e.g. C:\FTCDEVCommonAndroid\ftcdevcommon\build\outputs\aar\ftcdevcommon_2_0-debug.aar; replace 2_0 with the target version number
+Click OK
 
-How to build the aar file:  
+If you copy the source code and then add your own utilities to it, here's how to build the aar file:  
 Make the source code changes  
 
 In the build.gradle file change versionName 'n_v' to the correct version, e.g. 1_5 -> 2_0  
