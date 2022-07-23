@@ -8,6 +8,17 @@ This project builds an aar file (with a version number) that can then be loaded 
 There is an analagous project for IntelliJ. The two projects both have copies of the same source code - and so must be kept in sync -
 except for the subdirectories intellij and android, each of which contains platform-specific code.
 
+The FTCDEVCommonAndroid library may be incorporated into an FTC Android Studio project either as a source code module or as an aar.  
+
+1. As a source code module
+On Windows, for example, download and expand the zip file for this repository into a temporary directory, e.g. C:\TEMP\FTCDEVCommonAndroid.  
+Open your FTC Android Studio project and select File > New > Import Module
+Import the ftcappcommon module via from the temporary directory, e.g. C:\TEMP\FTCDEVCommonAndroid\ftcdevcommon
+Set Project settings the TeamCode module to depend on ftcappcommon
+
+2. As an aar
+TBD
+
 How to build the aar file:
 Make the source code changes  
 
@@ -20,6 +31,6 @@ Separately select Build -> Make module FTCDEVCommonAndroid.ftcdevcommon to build
 The aar will appear in C:\FTCDevCommonAndroid\ftcdevcommon\build\outputs\aar.
 But .gitignore includes build/ so instead of fighting with trying to ignore everything in
 build while keeping \build\outputs\aar, just force commit and push the aar from the Git
-command line with git add --force ftcdevcommon_n_v-debug.aar (with the correct version number.
+command line with git add --force ftcdevcommon_n_v-debug.aar (with the correct version number).
 
 
