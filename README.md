@@ -10,7 +10,7 @@ except for the subdirectories intellij and android, each of which contains platf
 
 The FTCDEVCommonAndroid library may be incorporated into an FTC Android Studio project either as a source code module or as an aar.  
 
-1. As a source code module
+1. As a source code module  
 On Windows, for example, download and expand the zip file for this repository into a temporary directory, e.g. C:\TEMP\FTCDEVCommonAndroid  
 Open your FTC Android Studio project and select File > New > Import Module  
 Select the source directory, e.g. C:\TEMP\FTCDEVCommonAndroid\ftcdevcommon and make sure the module name is :ftcdevcommon  
