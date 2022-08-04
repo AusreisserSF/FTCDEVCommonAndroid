@@ -24,7 +24,10 @@ Click OK
 On Windows, for example, download and expand the zip file for this repository into a temporary directory, e.g. C:\TEMP\FTCDEVCommonAndroid   
 In your Android Studio project, go to File > Project Structure and click on Dependencies, then TeamCode  
 Under the Declared Dependencies heading, click the + sign  
-Select 2 JAR/AAR Dependency and navigate to the aar file, e.g. C:\FTCDEVCommonAndroid\ftcdevcommon\build\outputs\aar\ftcdevcommon_2_0-debug.aar; replace 2_0 with the target version number
+Select 2 JAR/AAR Dependency and, in the box "Add Jar/Aar Dependency -> "Provide a path to the library file or directory to add", navigate
+   (if possible) to the aar file, e.g. C:\FTCDEVCommonAndroid\ftcdevcommon\build\outputs\aar\ftcdevcommon_2_0-debug.aar;
+   replace 2_0 with the target version number. If a file system browser does not appear then you will have to copy-and-paste the full path
+   and file name.
 Click OK
 
 If you copy the source code and then add your own utilities to it, here's how to build the aar file:  
@@ -38,7 +41,8 @@ Separately select Build -> Make module FTCDEVCommonAndroid.ftcdevcommon to build
 
 The aar will appear in C:\FTCDevCommonAndroid\ftcdevcommon\build\outputs\aar.
 But .gitignore includes build/ so instead of fighting with trying to ignore everything in
-build while keeping \build\outputs\aar, just force commit and push the aar from the Git
-command line with git add --force ftcdevcommon_n_v-debug.aar (with the correct version number).
+build while keeping \build\outputs\aar, take the following steps:  
+1. Open Git bash in the aar folder and force add it via $ git add --force ftcdevcommon_n_v-debug.aar (with the correct version number).
+2. Open the Android Studio project, commit and push
 
 
