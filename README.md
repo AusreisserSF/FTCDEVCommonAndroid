@@ -17,7 +17,7 @@ Select the source directory, e.g. C:\TEMP\FTCDEVCommonAndroid\ftcdevcommon and m
 Click Finish  
 In your Android Studio project, go to File > Project Structure and click on Dependencies, then TeamCode  
 Under the Declared Dependencies heading, click the + sign  
-Select 3 Module Dependency and click the checkbox for ftcdevcommon  
+Select 3 Module Dependency and click the checkbox for ftcdevcommon    
 Click OK  
 
 2. As an aar  
